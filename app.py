@@ -1,39 +1,70 @@
-from flask import Flask, render_template
+from flask import Flask, request, jsonify
 import sqlite3
 
 app = Flask(__name__)
 
-con = sqlite3.connect("data.db")
-cur = con.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id PRIMARY KEY, nome text)")
+def get_db():
+    con = sqlite3.connect("data.db")
+    con.row_factory = sqlite3.Row
+    return con
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return "Home - CRUD de Usuários"
 
-@app.route("/post")
-def post(nome):
-    cur.execute("INSERT INTO usuarios(nome) VALUES (?)", (nome,))
+@app.route("/post", methods=["POST"])
+def post():
+    nome = request.form.get("nome")
+    if not nome:
+        return jsonify({"error": "Nome inválido"}), 400
+
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("INSERT INTO usuarios (nome) VALUES (?)", (nome,))
     con.commit()
-    print("Usuário criado!")
+    con.close()
+    return jsonify({"message": "Usuário criado!"}), 201
 
-@app.route("/get")
+@app.route("/get", methods=["GET"])
 def get():
-    for linha in cur.execute("SELECT * FROM usuarios"):
-        print(linha)
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("SELECT * FROM usuarios")
+    usuarios = cur.fetchall()
+    con.close()
+    return jsonify([dict(u) for u in usuarios])
 
-@app.route("/update")
-def update(id, nome):
-    cur.execute("UPDATE usuarios SET nome =  ? WHERE id = ?", (nome, id))
+@app.route("/update", methods=["POST"])
+def update():
+    id = request.form.get("id")
+    nome = request.form.get("nome")
+    if not id or not nome:
+        return jsonify({"error": "Dados inválidos"}), 400
+
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("UPDATE usuarios SET nome=? WHERE id=?", (nome, id))
     con.commit()
-    print("Usuário atualizado!")
+    con.close()
+    return jsonify({"message": "Usuário atualizado!"})
 
-@app.route("/delete")
-def delete(id):
-    cur.execute("DELETE FROM usuarios WHERE id = ?" (id,))
+@app.route("/delete", methods=["POST"])
+def delete():
+    id = request.form.get("id")
+    if not id:
+        return jsonify({"error": "ID inválido"}), 400
+
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("DELETE FROM usuarios WHERE id=?", (id,))
     con.commit()
-    print("Usuário deletado!")
-    
-        
+    con.close()
+    return jsonify({"message": "Usuário deletado!"})
 
-app.run()
+if __name__ == "__main__":
+    con = get_db()
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
+    con.commit()
+    con.close()
+    app.run(debug=True)
