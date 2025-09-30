@@ -1,70 +1,27 @@
-from flask import Flask, request, jsonify
-import sqlite3
+class Cliente:
+    def __init__(self, id, nome):
+        if not nome:  # validação mínima
+            raise ValueError("Nome do cliente não pode ser vazio.")
+        self.id = id
+        self.nome = nome
 
-app = Flask(__name__)
 
-def get_db():
-    con = sqlite3.connect("data.db")
-    con.row_factory = sqlite3.Row
-    return con
+class DatabaseManager:
+    def __init__(self):
+        self.usuarios = []  # simula um banco
 
-@app.route("/")
-def home():
-    return "Home - CRUD de Usuários"
+    def incluir(self, cliente):
+        """Inclui um cliente na lista"""
+        self.usuarios.append(cliente)
 
-@app.route("/post", methods=["POST"])
-def post():
-    nome = request.form.get("nome")
-    if not nome:
-        return jsonify({"error": "Nome inválido"}), 400
+    def verificar(self, id):
+        """Retorna True se cliente existe"""
+        return any(c.id == id for c in self.usuarios)
 
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("INSERT INTO usuarios (nome) VALUES (?)", (nome,))
-    con.commit()
-    con.close()
-    return jsonify({"message": "Usuário criado!"}), 201
-
-@app.route("/get", methods=["GET"])
-def get():
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("SELECT * FROM usuarios")
-    usuarios = cur.fetchall()
-    con.close()
-    return jsonify([dict(u) for u in usuarios])
-
-@app.route("/update", methods=["POST"])
-def update():
-    id = request.form.get("id")
-    nome = request.form.get("nome")
-    if not id or not nome:
-        return jsonify({"error": "Dados inválidos"}), 400
-
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("UPDATE usuarios SET nome=? WHERE id=?", (nome, id))
-    con.commit()
-    con.close()
-    return jsonify({"message": "Usuário atualizado!"})
-
-@app.route("/delete", methods=["POST"])
-def delete():
-    id = request.form.get("id")
-    if not id:
-        return jsonify({"error": "ID inválido"}), 400
-
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("DELETE FROM usuarios WHERE id=?", (id,))
-    con.commit()
-    con.close()
-    return jsonify({"message": "Usuário deletado!"})
-
-if __name__ == "__main__":
-    con = get_db()
-    cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
-    con.commit()
-    con.close()
-    app.run(debug=True)
+    def atualizar(self, id, novo_nome):
+        """Atualiza nome do cliente"""
+        for c in self.usuarios:
+            if c.id == id:
+                c.nome = novo_nome
+                return True
+        return False
